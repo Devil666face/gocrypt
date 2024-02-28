@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"log"
 
@@ -43,12 +44,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := io.WriteFile(chip, i.OutPath); err != nil {
-		log.Fatal(err)
-	}
 	chipAesKey, err := async.Encrypt(s.AesKey, []byte(PubKey))
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(chipAesKey)
+	key := base64.StdEncoding.EncodeToString(chipAesKey)
+	chip = append(chip, []byte(key)...)
+	if err := io.WriteFile(chip, i.OutPath); err != nil {
+		log.Fatal(err)
+	}
 }
