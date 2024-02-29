@@ -9,13 +9,13 @@ import (
 )
 
 type Sync struct {
-	plain  []byte
+	text   []byte
 	AesKey []byte
 }
 
-func New(_plain []byte) *Sync {
+func New(_text []byte) *Sync {
 	return &Sync{
-		plain: _plain,
+		text: _text,
 	}
 }
 
@@ -33,7 +33,7 @@ func (s *Sync) Encrypt() ([]byte, error) {
 	if _, err = rand.Read(nonce); err != nil {
 		return nil, err
 	}
-	return gcm.Seal(nonce, nonce, s.plain, nil), nil
+	return gcm.Seal(nonce, nonce, s.text, nil), nil
 }
 
 // func DecryptAES(ciphertext []byte, secretKey string) ([]byte, error) {

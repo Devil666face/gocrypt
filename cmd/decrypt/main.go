@@ -1,5 +1,14 @@
 package main
 
+import (
+	"fmt"
+	"log"
+
+	"github.com/Devil666face/gocrypt/internal/async"
+	"github.com/Devil666face/gocrypt/internal/crypt"
+	"github.com/Devil666face/gocrypt/internal/io"
+)
+
 const PrivKey = `-----BEGIN RSA PRIVATE KEY-----
 MIIJKQIBAAKCAgEAw3VX83Uoxjtpx2zE4McFtOGq6IYSwc0Dx8fym1yS8ChXLlL6
 L032MZlFg9RRbRT0cJLOPFsy9Q9mUKDNoLP3gHvaVIAhlJwMfK10EH3qvnXreqSc
@@ -51,3 +60,20 @@ dOhAzIs3XMrfeJuOgXt0nwspLosItPRKhECiB5l3vEtTP3lHv0Qg/KZW9L3euNI7
 K3iyaG9+CNw1tJOmN/YpikykB1mwAeSNwRcmc0EE0iek1b5dPBZg+ltE3wP5H6Ol
 cNEYDHu60LKy8ML9BQBcSyRTvaih9h9Y7jBvdjn0QRkaP+lEZFG1jLseQXaw
 -----END RSA PRIVATE KEY-----`
+
+func main() {
+	i := crypt.NewInput()
+	in, err := io.ReadFile(i.InPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	chipRsaKey := in[len(in)-988:]
+	a := async.New(chipRsaKey, func(a *async.Async) {
+		a.PrivKey = async.Key(PrivKey)
+	})
+	aesKey, err := a.DecryptBase64()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(aesKey))
+}
