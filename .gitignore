@@ -1,0 +1,5 @@
+/bin
+/id_rsa
+/id_rsa.pub
+/cmd/encrypt/id_rsa.pub
+/cmd/decrypt/id_rsa

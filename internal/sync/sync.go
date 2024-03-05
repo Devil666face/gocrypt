@@ -13,14 +13,18 @@ type Sync struct {
 	AesKey []byte
 }
 
-func New(_text []byte) *Sync {
-	return &Sync{
+func New(_text []byte, opts ...func(*Sync)) *Sync {
+	s := &Sync{
 		text: _text,
 	}
+	s.AesKey = lib.AES32RandomKey()
+	for _, f := range opts {
+		f(s)
+	}
+	return s
 }
 
 func (s *Sync) Encrypt() ([]byte, error) {
-	s.AesKey = lib.AES32RandomKey()
 	aes, err := aes.NewCipher(s.AesKey)
 	if err != nil {
 		return nil, err
@@ -36,25 +40,25 @@ func (s *Sync) Encrypt() ([]byte, error) {
 	return gcm.Seal(nonce, nonce, s.text, nil), nil
 }
 
-// func DecryptAES(ciphertext []byte, secretKey string) ([]byte, error) {
-// 	aes, err := aes.NewCipher([]byte(secretKey))
-// 	if err != nil {
-// 		return nil, err
-// 	}
+func (s *Sync) Decrypt() ([]byte, error) {
+	aes, err := aes.NewCipher(s.AesKey)
+	if err != nil {
+		return nil, err
+	}
 
-// 	gcm, err := cipher.NewGCM(aes)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+	gcm, err := cipher.NewGCM(aes)
+	if err != nil {
+		return nil, err
+	}
 
-// 	// Since we know the ciphertext is actually nonce+ciphertext
-// 	// And len(nonce) == NonceSize(). We can separate the two.
-// 	nonceSize := gcm.NonceSize()
-// 	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
+	// Since we know the ciphertext is actually nonce+ciphertext
+	// And len(nonce) == NonceSize(). We can separate the two.
+	nonceSize := gcm.NonceSize()
+	nonce, ciphertext := s.text[:nonceSize], s.text[nonceSize:]
 
-// 	plain, err := gcm.Open(nil, nonce, ciphertext, nil)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return plain, nil
-// }
+	plain, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, err
+	}
+	return plain, nil
+}
