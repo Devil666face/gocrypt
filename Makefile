@@ -27,13 +27,6 @@ KEY_TARGET = cmd/keys/main.go
 
 run: build test
 
-test:
-	encrypt -in=echo -out=echo.enc
-	decrypt -in=echo.enc -out=echo.dec
-	chmod +x ./echo.dec
-	./echo.dec "123"
-	rm ./echo.dec ./echo.enc
-
 build: ## Build release
 	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags=$(LDFLAGS) -gcflags=$(GCFLAGS) -asmflags=$(ASMFLAGS) -o $(PROJECT_BIN)/$(KEY_BIN) $(KEY_TARGET)
 	$(KEY_BIN)

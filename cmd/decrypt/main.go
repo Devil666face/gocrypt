@@ -10,6 +10,7 @@ import (
 	s "sync"
 
 	"github.com/Devil666face/gocrypt/internal/async"
+	"github.com/Devil666face/gocrypt/internal/crypt"
 	"github.com/Devil666face/gocrypt/internal/io"
 	"github.com/Devil666face/gocrypt/internal/sync"
 	"github.com/Devil666face/gocrypt/pkg/lib"
@@ -54,10 +55,17 @@ func Decrypt(f lib.File) error {
 var PrivKey string
 
 func main() {
-	files, err := lib.Walk(".")
-	if err != nil {
-		log.Fatal(err)
+	in := crypt.NewInput()
+	if in.InPath == "" {
+		in.InPath = "."
 	}
+
+	// files, err := lib.Walk(in.InPath)
+	// if err != nil {
+	// 	log.Print(err)
+	// }
+
+	files := lib.MustWalk(in.InPath)
 
 	results := make(chan error, len(files))
 	go func() {
