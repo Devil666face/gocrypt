@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"log"
 	"os"
+	"runtime"
 	s "sync"
 
 	"github.com/Devil666face/gocrypt/internal/async"
@@ -16,15 +17,20 @@ import (
 //go:embed id_rsa.pub
 var PubKey string
 
-func Encrypt(f lib.File) error {
-	if f.Path == "encrypt" {
+type encrypt struct {
+	in   *crypt.Input
+	file lib.File
+}
+
+func (e *encrypt) to() error {
+	if e.file.Path == "encrypt" {
 		return nil
 	}
-	in, err := io.ReadFile(f.Path)
+	in, err := io.ReadFile(e.file.Path)
 	if err != nil {
 		return err
 	}
-	if err := os.Remove(f.Path); err != nil {
+	if err := os.Remove(e.file.Path); err != nil {
 		return err
 	}
 	s := sync.New(in)
@@ -32,7 +38,7 @@ func Encrypt(f lib.File) error {
 	if err != nil {
 		return err
 	}
-	a := async.New(s.AesKey, func(a *async.Async) {
+	a := async.New(s.AesKey, []byte(e.in.InPassPhrase), func(a *async.Async) {
 		a.PubKey = async.Key(PubKey)
 	})
 	chipAesKey, err := a.EncryptBase64()
@@ -40,42 +46,51 @@ func Encrypt(f lib.File) error {
 		return err
 	}
 	chip = append(chip, chipAesKey...)
-	if err := io.WriteFile(chip, f.Path+".enc"); err != nil {
+	if err := io.WriteFile(chip, e.file.Path+".enc"); err != nil {
 		return err
 	}
-	log.Print(f.Path, " encrypted")
+	log.Print(e.file.Path, " encrypted")
 	return nil
+}
+
+func worker(jobs <-chan encrypt, results chan<- error, wg *s.WaitGroup) {
+	defer wg.Done()
+
+	for job := range jobs {
+		err := job.to()
+		results <- err
+	}
 }
 
 func main() {
 	in := crypt.NewInput()
-	if in.InPath == "" {
-		in.InPath = "."
-	}
-
 	// files, err := lib.Walk(in.InPath)
 	// if err != nil {
 	// 	log.Print(err)
 	// }
+
 	files := lib.MustWalk(in.InPath)
 
+	jobs := make(chan encrypt, len(files))
 	results := make(chan error, len(files))
-	go func() {
-		wg := s.WaitGroup{}
-		for _, file := range files {
-			wg.Add(1)
-			go func(file lib.File) {
-				defer wg.Done()
-				results <- Encrypt(file)
-			}(file)
-		}
-		wg.Wait()
-		close(results)
-	}()
+	wg := s.WaitGroup{}
+	// Start workers
+	for i := 1; i <= runtime.NumCPU(); i++ {
+		wg.Add(1)
+		go worker(jobs, results, &wg)
+	}
 
+	// Enqueue jobs
+	for _, file := range files {
+		e := encrypt{in: in, file: file}
+		jobs <- e
+	}
+	close(jobs)
+	wg.Wait()
+	close(results)
 	for err := range results {
 		if err != nil {
-			log.Print(err)
+			log.Println(err)
 		}
 	}
 }

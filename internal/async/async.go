@@ -44,14 +44,16 @@ func (k Key) pemToPrivRSA() (*rsa.PrivateKey, error) {
 }
 
 type Async struct {
-	text    []byte
-	PubKey  Key
-	PrivKey Key
+	text       []byte
+	passphrase []byte
+	PubKey     Key
+	PrivKey    Key
 }
 
-func New(_text []byte, opts ...func(*Async)) *Async {
+func New(_text, _passphrase []byte, opts ...func(*Async)) *Async {
 	a := &Async{
-		text: _text,
+		text:       _text,
+		passphrase: _passphrase,
 	}
 	for _, f := range opts {
 		f(a)
@@ -64,7 +66,7 @@ func (a *Async) Encrypt() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error to get pub key: %w", err)
 	}
-	ciphertext, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, rsaPubKey, a.text, []byte(""))
+	ciphertext, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, rsaPubKey, a.text, a.passphrase)
 	if err != nil {
 		return nil, fmt.Errorf("error to encrypt message: %w", err)
 	}
@@ -80,7 +82,7 @@ func (a *Async) Decrypt() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error to convert pem message to bytes: %w", err)
 	}
-	plaintext, err := rsa.DecryptOAEP(sha256.New(), rand.Reader, rsaPrivKey, pemMess, []byte(""))
+	plaintext, err := rsa.DecryptOAEP(sha256.New(), rand.Reader, rsaPrivKey, pemMess, a.passphrase)
 	if err != nil {
 		return nil, fmt.Errorf("error to decrypt message: %w", err)
 	}
