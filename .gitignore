@@ -1,4 +1,5 @@
 /bin
+/tmp
 /id_rsa
 /id_rsa.pub
 /cmd/encrypt/id_rsa.pub

