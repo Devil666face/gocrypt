@@ -41,6 +41,8 @@ build: ## Build release
 	mv id_rsa.pub cmd/encrypt/id_rsa.pub
 	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags=$(LDFLAGS) -gcflags=$(GCFLAGS) -asmflags=$(ASMFLAGS) -o $(PROJECT_BIN)/$(ENC_BIN) $(ENC_TARGET)
 	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags=$(LDFLAGS) -gcflags=$(GCFLAGS) -asmflags=$(ASMFLAGS) -o $(PROJECT_BIN)/$(DEC_BIN) $(DEC_TARGET)
+	upx $(PROJECT_BIN)/$(ENC_BIN)
+	upx $(PROJECT_BIN)/$(DEC_BIN)
 	rm cmd/encrypt/id_rsa.pub cmd/decrypt/id_rsa $(PROJECT_BIN)/$(KEY_BIN)
 
 .install-linter: ## Install linter
