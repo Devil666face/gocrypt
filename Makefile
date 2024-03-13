@@ -38,6 +38,17 @@ build: ## Build release
 	upx $(PROJECT_BIN)/$(DEC_BIN)
 	rm cmd/encrypt/id_rsa.pub cmd/decrypt/id_rsa $(PROJECT_BIN)/$(KEY_BIN)
 
+build-win: ## Build release
+	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) go build -ldflags=$(LDFLAGS) -gcflags=$(GCFLAGS) -asmflags=$(ASMFLAGS) -o $(PROJECT_BIN)/$(KEY_BIN) $(KEY_TARGET)
+	$(KEY_BIN)
+	mv id_rsa cmd/decrypt/id_rsa
+	mv id_rsa.pub cmd/encrypt/id_rsa.pub
+	CGO_ENABLED=$(CGO_ENABLED) GOOS=windows GOARCH=$(GOARCH) go build -ldflags=$(LDFLAGS) -gcflags=$(GCFLAGS) -asmflags=$(ASMFLAGS) -o $(PROJECT_BIN)/$(ENC_BIN).exe $(ENC_TARGET)
+	CGO_ENABLED=$(CGO_ENABLED) GOOS=windows GOARCH=$(GOARCH) go build -ldflags=$(LDFLAGS) -gcflags=$(GCFLAGS) -asmflags=$(ASMFLAGS) -o $(PROJECT_BIN)/$(DEC_BIN).exe $(DEC_TARGET)
+	upx $(PROJECT_BIN)/$(ENC_BIN).exe
+	upx $(PROJECT_BIN)/$(DEC_BIN).exe
+	rm cmd/encrypt/id_rsa.pub cmd/decrypt/id_rsa $(PROJECT_BIN)/$(KEY_BIN)
+
 .install-linter: ## Install linter
 	[ -f golangci-lint ] || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(PROJECT_BIN) v1.54.2
 
